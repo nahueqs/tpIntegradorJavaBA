@@ -2,7 +2,6 @@ package pedidos;
 
 import excepciones.productos.StockInsuficienteException;
 import productos.Producto;
-import productos.ProductoService;
 
 public class ProductoPedido {
 
@@ -34,7 +33,7 @@ public class ProductoPedido {
     }
   }
 
-  public void mostrarProductoPedido(){
+  public void mostrarDetalle(){
     System.out.println("ID Producto: " + getIdProducto() + " Cantidad: " + cantidad + " = $" + subtotal);
   }
 

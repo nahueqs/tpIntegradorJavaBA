@@ -1,6 +1,7 @@
 package pedidos;
 
 import excepciones.pedidos.PedidoInexistenteException;
+import excepciones.productos.ProductoInexistenteException;
 import excepciones.productos.StockInsuficienteException;
 import java.util.ArrayList;
 import productos.Producto;
@@ -15,65 +16,81 @@ public class PedidoService {
     this.pedidos = new ArrayList<>();
   }
 
+  public Pedido crearPedido(){
+    Pedido nuevoPedido = new Pedido();
+    pedidos.add(nuevoPedido);
+    System.out.println("Nuevo pedido con id "+ nuevoPedido.getId() + " creado correctamente.");
+    return nuevoPedido;
+  }
+
   public void agregarProductoAlPedido(int idPedido, int idProducto, int cantidad){
+    validarPedidoExiste(idPedido);
+    validarProductoExiste(idProducto);
+    validarPuedoAgregarCantidadDeUnProducto(idProducto, cantidad);
+
     Pedido pedido = buscarPedidoPorId(idPedido);
     Producto producto = productoService.buscarProductoPorId(idProducto);
-    validarPuedoAgregarCantidadDeUnProducto(idProducto, cantidad);
+
     pedido.agregarProducto(producto, cantidad);
     restarStockProducto(idProducto, cantidad);
   }
 
   public void eliminarProductoDelPedido(int idPedido, int idProducto, int cantidad){
-    Pedido pedido = buscarPedidoPorId(idPedido);
-    Producto producto = productoService.buscarProductoPorId(idProducto);
+    validarPedidoExiste(idPedido);
+    validarProductoExiste(idProducto);
     validarPuedoRestarCantidadDeUnProducto(idProducto, cantidad);
+
+    Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.quitarProducto(idProducto);
     sumarStockProducto(idProducto, cantidad);
   }
 
   public void restarCantidadProductoPedido(int idPedido, int idProducto, int cantidad){
-    Pedido pedido = buscarPedidoPorId(idPedido);
-    Producto producto = productoService.buscarProductoPorId(idProducto);
+    validarPedidoExiste(idPedido);
+    validarProductoExiste(idProducto);
     validarPuedoRestarCantidadDeUnProducto(idProducto, cantidad);
+
+    Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.quitarCantidadProductoPedido(idProducto, cantidad);
     sumarStockProducto(idProducto, cantidad);
   }
 
   public void sumarCantidadProductoPedido(int idPedido, int idProducto, int cantidad){
-    Pedido pedido = buscarPedidoPorId(idPedido);
-    Producto producto = productoService.buscarProductoPorId(idProducto);
+    validarPedidoExiste(idPedido);
+    validarProductoExiste(idProducto);
     validarPuedoAgregarCantidadDeUnProducto(idProducto, cantidad);
+
+    Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.agregarCantidadProductoPedido(idProducto, cantidad);
     restarStockProducto(idProducto, cantidad);
   }
 
   public void confirmarPedido(int idPedido) {
+    validarPedidoExiste(idPedido);
     Pedido pedidoAConfirmar = buscarPedidoPorId(idPedido);
     if (pedidoAConfirmar.getEstado() == EstadoPedido.PENDIENTE) {
       pedidoAConfirmar.confirmarPedido();
+    } else {
+      System.out.println("El pedido con id " + idPedido + " ya se encuentra confirmado.");
     };
-  }
-
-  public void cancelarPedido(Pedido pedido){
-    Pedido pedidoACancelar = buscarPedidoPorId(pedido.getId());
-    if (pedidoACancelar.getEstado() == EstadoPedido.PENDIENTE) {
-
-
-
-
-      pedidoACancelar.cancelarPedido();
-    };
-
   }
 
   public void mostrarTodos() {
+    pedidos.forEach(p -> p.mostrarDetallePedido());
   }
 
+  private void validarProductoExiste(int idProducto){
+    productoService.validarProductoExiste(idProducto);
+  }
+
+  private void validarPedidoExiste(int idPedido){
+    if (buscarPedidoPorId(idPedido) == null) {
+      new PedidoInexistenteException("No existe ningun pedido con el id "+ idPedido);
+    }
+  }
 
   private Pedido buscarPedidoPorId(int idPedido){
-    return pedidos.stream().filter(p -> p.getId() == idPedido).findFirst().orElseThrow(() ->
-        new PedidoInexistenteException("No existe ningun pedido con el id"+ idPedido)
-    );
+    return pedidos.stream().filter(p -> p.getId() == idPedido).findFirst().orElse(null);
   }
 
   private void sumarStockProducto(int idProducto, int cantidad){

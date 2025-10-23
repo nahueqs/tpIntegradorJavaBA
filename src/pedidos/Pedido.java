@@ -1,13 +1,9 @@
 package pedidos;
 
-import excepciones.pedidos.PedidoInexistenteException;
-import excepciones.productos.ProductoInexistenteException;
 import excepciones.productos.ProductoNoEstaEnPedidoException;
-import excepciones.productos.StockInsuficienteException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import productos.Producto;
-import productos.ProductoService;
 
 public class Pedido {
 
@@ -28,15 +24,24 @@ public class Pedido {
   }
 
   public void agregarProducto(Producto producto, int cantidad) {
+    if (getProductoEstaEnPedido(producto.getId()) != null){
+      ProductoPedido productoPedido = getProductoPedidoEnProductos(producto.getId());
+      productoPedido.sumarCantidad(cantidad);
+      this.total += productoPedido.getSubtotal();
+      return;
+    };
+
     ProductoPedido productoPedido = new ProductoPedido(producto, cantidad);
     this.productos.add(productoPedido);
     this.total += productoPedido.getSubtotal();
   }
 
+  private ProductoPedido getProductoEstaEnPedido(int idProducto){
+    return this.productos.stream().filter(p -> p.getIdProducto() == idProducto).findFirst().orElse(null);
+  }
+
   protected void verificarProductoEstaEnPedido(int idProducto) {
-    ProductoPedido producto = this.productos.stream().filter(p -> p.getIdProducto() == idProducto).findFirst()
-        .orElse(null);
-    if (producto == null) {
+    if (getProductoEstaEnPedido(idProducto) == null){
       throw new ProductoNoEstaEnPedidoException("El producto con ID " + idProducto + " no existe en el pedido");
     }
   }
@@ -72,11 +77,7 @@ public class Pedido {
   }
 
   public void confirmarPedido() {
-    this.estado = EstadoPedido.FINALIZADO;
-  }
-
-  public void cancelarPedido() {
-    this.estado = EstadoPedido.CANCELADO;
+    this.estado = EstadoPedido.CONFIRMADO;
   }
 
   public int getId() {
@@ -85,5 +86,16 @@ public class Pedido {
 
   public EstadoPedido getEstado() {
     return this.estado;
+  }
+
+  public void mostrarDetallePedido() {
+    System.out.println("\n--- DETALLE DEL PEDIDO ---");
+    System.out.println("ID: " + this.id);
+    System.out.println("Estado: " + this.estado);
+    System.out.println("Total: " + this.total);
+    System.out.println("Productos:");
+    for (ProductoPedido producto : this.productos) {
+      producto.mostrarDetalle();
+    }
   }
 }
