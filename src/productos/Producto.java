@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Producto {
   private static AtomicInteger contadorProductos = new AtomicInteger(0);
   private int id;
+
   private String nombre;
   private float precio;
   private int stock;
@@ -58,7 +59,7 @@ public class Producto {
     this.precio = precio;
   }
 
-  public int getStock(int idProducto) {
+  public int getStock() {
     return stock;
   }
 

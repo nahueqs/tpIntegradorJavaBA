@@ -1,8 +1,9 @@
 package pedidos;
 
+import excepciones.pedidos.CantidadPedidoInvalidaException;
 import excepciones.pedidos.PedidoInexistenteException;
-import excepciones.productos.ProductoInexistenteException;
 import excepciones.productos.StockInsuficienteException;
+import excepciones.productos.StockInvalidoException;
 import java.util.ArrayList;
 import productos.Producto;
 import productos.ProductoService;
@@ -24,45 +25,71 @@ public class PedidoService {
   }
 
   public void agregarProductoAlPedido(int idPedido, int idProducto, int cantidad){
+    validarCantidadPedido(cantidad);
     validarPedidoExiste(idPedido);
-    validarProductoExiste(idProducto);
-    validarPuedoAgregarCantidadDeUnProducto(idProducto, cantidad);
+    productoService.validarProductoExiste(idProducto);
+    productoService.validarStockMayorA(idProducto, cantidad);
 
     Pedido pedido = buscarPedidoPorId(idPedido);
     Producto producto = productoService.buscarProductoPorId(idProducto);
 
     pedido.agregarProducto(producto, cantidad);
-    restarStockProducto(idProducto, cantidad);
+    productoService.restarStockProducto(idProducto, cantidad);
+  }
+
+  private void validarCantidadPedido(int cantidad) {
+    if (cantidad < 0) {
+      throw new CantidadPedidoInvalidaException("La cantidad del producto no puede ser negativa, ingrese otro valor válido.");
+    }
   }
 
   public void eliminarProductoDelPedido(int idPedido, int idProducto, int cantidad){
     validarPedidoExiste(idPedido);
-    validarProductoExiste(idProducto);
-    validarPuedoRestarCantidadDeUnProducto(idProducto, cantidad);
+    validarProductoEstaEnPedido(idPedido, idProducto);
+    productoService.validarProductoExiste(idProducto);
+    validarCantidadEnPedidoMayorIgualA(idPedido, idProducto, cantidad);
 
+    productoService.sumarStockProducto(idProducto, cantidad);
     Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.quitarProducto(idProducto);
-    sumarStockProducto(idProducto, cantidad);
+
   }
+
+  private void validarProductoEstaEnPedido(int idPedido, int idProducto) {
+  }
+
+
 
   public void restarCantidadProductoPedido(int idPedido, int idProducto, int cantidad){
     validarPedidoExiste(idPedido);
-    validarProductoExiste(idProducto);
-    validarPuedoRestarCantidadDeUnProducto(idProducto, cantidad);
+    productoService.validarProductoExiste(idProducto);
+    validarProductoEstaEnPedido(idPedido, idProducto);
+    if (cantidad == getCantidadProductoEnPedido(idPedido, idProducto)) {
+      eliminarProductoDelPedido(idPedido, idProducto, cantidad);
+      return;
+    }
+    validarCantidadEnPedidoMayorIgualA(idPedido, idProducto, cantidad);
 
     Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.quitarCantidadProductoPedido(idProducto, cantidad);
-    sumarStockProducto(idProducto, cantidad);
+    productoService.sumarStockProducto(idProducto, cantidad);
+  }
+
+  private void validarCantidadEnPedidoMayorIgualA(int idPedido, int idProducto, int cantidad) {
+    int cantidadEnPedido = getCantidadProductoEnPedido(idPedido, idProducto);
+    if (cantidadEnPedido < cantidad) {
+      throw new StockInvalidoException("La cantidad que desea quitar no puede ser mayor a la del pedido.");
+    }
   }
 
   public void sumarCantidadProductoPedido(int idPedido, int idProducto, int cantidad){
     validarPedidoExiste(idPedido);
-    validarProductoExiste(idProducto);
-    validarPuedoAgregarCantidadDeUnProducto(idProducto, cantidad);
+    productoService.validarProductoExiste(idProducto);
+    productoService.validarStockMayorA(idProducto, cantidad);
 
     Pedido pedido = buscarPedidoPorId(idPedido);
     pedido.agregarCantidadProductoPedido(idProducto, cantidad);
-    restarStockProducto(idProducto, cantidad);
+    productoService.restarStockProducto(idProducto, cantidad);
   }
 
   public void confirmarPedido(int idPedido) {
@@ -79,8 +106,10 @@ public class PedidoService {
     pedidos.forEach(p -> p.mostrarDetallePedido());
   }
 
-  private void validarProductoExiste(int idProducto){
-    productoService.validarProductoExiste(idProducto);
+  public void mostrarDetallePedido(int idPedido){
+    validarPedidoExiste(idPedido);
+    Pedido pedido = buscarPedidoPorId(idPedido);
+    pedido.mostrarDetallePedido();
   }
 
   private void validarPedidoExiste(int idPedido){
@@ -93,23 +122,11 @@ public class PedidoService {
     return pedidos.stream().filter(p -> p.getId() == idPedido).findFirst().orElse(null);
   }
 
-  private void sumarStockProducto(int idProducto, int cantidad){
-    productoService.sumarStockProducto(idProducto, cantidad);
+  private int getCantidadProductoEnPedido(int idPedido, int idProducto){
+    validarPedidoExiste(idPedido);
+    productoService.validarProductoExiste(idProducto);
+    Pedido pedido = buscarPedidoPorId(idPedido);
+    return pedido.getCantidadProductoEnPedido(idProducto);
   }
 
-  private void restarStockProducto(int idProducto, int cantidad){
-    productoService.restarStockProducto(idProducto, cantidad);
-  }
-
-  private void validarPuedoRestarCantidadDeUnProducto(int idProducto, int cantidad){
-    if (productoService.getStockProducto(idProducto) < cantidad){
-      throw new StockInsuficienteException("No hay stock suficiente para restar el producto id "+ idProducto +" al pedido");
-    }
-  }
-
-  private void validarPuedoAgregarCantidadDeUnProducto(int idProducto, int cantidad){
-    if (productoService.getStockProducto(idProducto) < cantidad){
-      throw new StockInsuficienteException("No hay stock suficiente para agregar el producto id "+ idProducto +" al pedido");
-    }
-  }
 }

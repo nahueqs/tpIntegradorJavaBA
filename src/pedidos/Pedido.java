@@ -98,4 +98,9 @@ public class Pedido {
       producto.mostrarDetalle();
     }
   }
+
+  public int getCantidadProductoEnPedido(int idProducto) {
+    verificarProductoEstaEnPedido(idProducto);
+    return getProductoPedidoEnProductos(idProducto).getCantidad();
+  }
 }
